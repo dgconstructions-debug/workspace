@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DG Workspace – Employees</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    function toggleAddForm() {
+      const form = document.getElementById('add-form');
+      const arrow = document.getElementById('arrow-icon');
+      form.classList.toggle('hidden');
+      arrow.classList.toggle('rotate-180');
+    }
+
+    function openEditModal(emp) {
+      const m = document.getElementById('edit-modal');
+      m.querySelector('[name=name]').value        = emp.name        || '';
+      m.querySelector('[name=mobile]').value      = emp.mobile      || '';
+      m.querySelector('[name=email]').value       = emp.email       || '';
+      m.querySelector('[name=role]').value        = emp.role        || 'employee';
+      m.querySelector('[name=designation]').value = emp.designation || '';
+      m.querySelector('[name=department]').value  = emp.department  || '';
+      m.querySelector('[name=date_of_joining]').value = emp.date_of_joining || '';
+      m.querySelector('[name=date_of_birth]').value   = emp.date_of_birth   || '';
+      m.querySelector('[name=uan_number]').value  = emp.uan_number  || '';
+      m.querySelector('[name=pan_number]').value  = emp.pan_number  || '';
+      m.querySelector('[name=location_id]').value = emp.location_id || '';
+      m.querySelector('[name=new_password]').value = '';
+      m.querySelector('form').action = '/employees/' + emp.id + '/edit';
+      document.getElementById('edit-modal-overlay').classList.remove('hidden');
+    }
+    function closeEditModal() {
+      document.getElementById('edit-modal-overlay').classList.add('hidden');
+    }
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  {% include '_nav.html' %}
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="px-4 py-3 rounded-lg text-sm font-medium
+            {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200
+            {% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+            {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Add employee panel -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <button onclick="toggleAddForm()"
+        class="w-full flex items-center justify-between px-6 py-4 text-left focus:outline-none">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+          </svg>
+          <span class="font-semibold text-gray-800">Add New Employee</span>
+        </div>
+        <svg id="arrow-icon" class="w-5 h-5 text-gray-400 transition-transform duration-200"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+
+      <div id="add-form" class="hidden border-t border-gray-100 px-6 py-5">
+        <form method="post" action="{{ url_for('add_employee') }}">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Full name *</label>
+              <input type="text" name="name" required placeholder="e.g. Ravi Kumar"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Mobile (username) *</label>
+              <input type="text" name="mobile" required placeholder="91XXXXXXXXXX"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Email</label>
+              <input type="email" name="email" placeholder="ravi@example.com"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Role</label>
+              <select name="role"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Password *</label>
+              <input type="password" name="password" required placeholder="Temporary password"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Designation</label>
+              <input type="text" name="designation" placeholder="e.g. Site Supervisor"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Department</label>
+              <input type="text" name="department" placeholder="e.g. Operations"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date of Joining</label>
+              <input type="date" name="date_of_joining"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date of Birth</label>
+              <input type="date" name="date_of_birth"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">UAN Number</label>
+              <input type="text" name="uan_number" placeholder="Universal Account Number"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">PAN Number</label>
+              <input type="text" name="pan_number" placeholder="e.g. ABCDE1234F"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Location</label>
+              <select name="location_id"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                <option value="">— None —</option>
+                {% for loc in locations %}
+                  <option value="{{ loc.id }}">{{ loc.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-end">
+            <button type="submit"
+              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm">
+              Add Employee
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Employee list -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-800">All Employees ({{ employees | length }})</h2>
+      </div>
+
+      {% if employees %}
+        <div class="divide-y divide-gray-50">
+          {% for emp in employees %}
+          <div class="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition">
+
+            <!-- Avatar -->
+            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-bold text-sm">
+              {{ emp.name[0] | upper }}
+            </div>
+
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-gray-800 text-sm">{{ emp.name }}
+                {% if emp.id == user.id %}
+                  <span class="ml-1 text-xs text-orange-500">(you)</span>
+                {% endif %}
+              </p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                {{ emp.mobile }}{% if emp.email %} &middot; {{ emp.email }}{% endif %}
+              </p>
+              {% if emp.designation or emp.department %}
+              <p class="text-xs text-gray-500 mt-0.5">
+                {% if emp.designation %}{{ emp.designation }}{% endif %}
+                {% if emp.designation and emp.department %} &middot; {% endif %}
+                {% if emp.department %}{{ emp.department }}{% endif %}
+              </p>
+              {% endif %}
+              {% if emp.date_of_birth %}
+              <p class="text-xs text-gray-400 mt-0.5">
+                🎂 {{ emp.date_of_birth }}
+                {% if emp.date_of_birth[5:] == today_mmdd %}
+                  <span class="ml-1 text-pink-500 font-semibold">🎉 Birthday today!</span>
+                {% endif %}
+              </p>
+              {% endif %}
+              {% if user.role == 'admin' and (emp.uan_number or emp.pan_number) %}
+              <p class="text-xs text-gray-400 mt-0.5">
+                {% if emp.uan_number %}UAN: {{ emp.uan_number }}{% endif %}
+                {% if emp.uan_number and emp.pan_number %} &middot; {% endif %}
+                {% if emp.pan_number %}PAN: {{ emp.pan_number }}{% endif %}
+              </p>
+              {% endif %}
+            </div>
+
+            <!-- Role badge -->
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full
+              {% if emp.role == 'admin' %}bg-purple-100 text-purple-700
+              {% elif emp.role == 'manager' %}bg-blue-100 text-blue-700
+              {% else %}bg-gray-100 text-gray-500{% endif %}">
+              {{ emp.role | title }}
+            </span>
+
+            <!-- Edit / Delete (admin only) -->
+            {% if user.role == 'admin' %}
+            <button type="button"
+              onclick="openEditModal({{ {'id': emp.id, 'name': emp.name, 'mobile': emp.mobile, 'email': emp.email or '', 'role': emp.role, 'designation': emp.designation or '', 'department': emp.department or '', 'date_of_joining': emp.date_of_joining or '', 'date_of_birth': emp.date_of_birth or '', 'uan_number': emp.uan_number or '', 'pan_number': emp.pan_number or '', 'location_id': emp.location_id or ''} | tojson }})"
+              class="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg transition font-medium">
+              Edit
+            </button>
+            {% endif %}
+            {% if user.role == 'admin' and emp.id != user.id %}
+            <form method="post" action="{{ url_for('delete_employee', emp_id=emp.id) }}"
+              onsubmit="return confirm('Remove {{ emp.name }}? This cannot be undone.')">
+              <button type="submit"
+                class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg transition font-medium">
+                Remove
+              </button>
+            </form>
+            {% endif %}
+
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="py-12 text-center text-gray-400 text-sm">No employees yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Edit Employee Modal -->
+  <div id="edit-modal-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div id="edit-modal" class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 text-lg">Edit Employee</h2>
+        <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <form method="post" class="px-6 py-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Full name *</label>
+            <input type="text" name="name" required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Mobile (username) *</label>
+            <input type="text" name="mobile" required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Email</label>
+            <input type="email" name="email"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Role</label>
+            <select name="role"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Designation</label>
+            <input type="text" name="designation"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Department</label>
+            <input type="text" name="department"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date of Joining</label>
+            <input type="date" name="date_of_joining"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Date of Birth</label>
+            <input type="date" name="date_of_birth"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">UAN Number</label>
+            <input type="text" name="uan_number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">PAN Number</label>
+            <input type="text" name="pan_number"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Location</label>
+            <select name="location_id"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+              <option value="">— None —</option>
+              {% for loc in locations %}
+                <option value="{{ loc.id }}">{{ loc.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">New Password <span class="normal-case text-gray-400 font-normal">(leave blank to keep)</span></label>
+            <input type="password" name="new_password" placeholder="Change password (optional)"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+          </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-3">
+          <button type="button" onclick="closeEditModal()"
+            class="text-sm text-gray-600 hover:text-gray-800 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition">Cancel</button>
+          <button type="submit"
+            class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</body>
+</html>

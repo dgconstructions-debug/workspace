@@ -1,0 +1,83 @@
+<div class="h-1 bg-orange-500 w-full"></div>
+<nav class="bg-[#1B2B4B] shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-3">
+
+    <!-- Brand -->
+    <a href="{{ url_for('dashboard') }}" class="flex items-center gap-2 flex-shrink-0">
+      <span class="text-xl leading-none">🏗️</span>
+      <div class="leading-tight hidden sm:block">
+        <span class="text-orange-400 font-black text-sm tracking-tight">DG</span>
+        <span class="text-white font-semibold text-sm tracking-tight"> Workspace</span>
+      </div>
+    </a>
+
+    <!-- Nav tabs (scrollable on mobile) -->
+    <div class="flex items-center gap-0.5 overflow-x-auto flex-1 justify-center" style="scrollbar-width:none">
+      {% set ep = request.endpoint %}
+
+      <a href="{{ url_for('dashboard') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'dashboard' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Home
+      </a>
+
+      <a href="{{ url_for('tasks_list') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep in ('tasks_list', 'task_detail') %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Tasks
+      </a>
+
+      {% if user.role in ('admin', 'manager') %}
+      <a href="{{ url_for('employees_list') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'employees_list' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Employees
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('attendance_view') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'attendance_view' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Attendance
+      </a>
+
+      <a href="{{ url_for('leaves_view') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'leaves_view' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Leaves
+      </a>
+
+      {% if user.role in ('admin', 'manager', 'hr') %}
+      <a href="{{ url_for('salary_view') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'salary_view' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Salary
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('calendar_view') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'calendar_view' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Calendar
+      </a>
+
+      {% if user.role in ('admin', 'manager') %}
+      <a href="{{ url_for('locations_list') }}"
+        class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition
+          {% if ep == 'locations_list' %}bg-orange-500 text-white{% else %}text-slate-300 hover:text-white hover:bg-[#243a5e]{% endif %}">
+        Locations
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- User + Logout -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="text-slate-300 text-xs hidden md:block truncate max-w-[120px]">{{ user.name }}</span>
+      <a href="{{ url_for('logout') }}"
+        class="text-xs bg-[#0F1E36] hover:bg-black text-white px-3 py-1.5 rounded-lg transition">
+        Logout
+      </a>
+    </div>
+
+  </div>
+</nav>

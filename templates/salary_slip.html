@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salary Slip – {{ slip.emp_name }} – {{ month_name }} {{ slip.year }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      .slip-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Full nav (hidden on print) -->
+  <div class="no-print">
+    {% include '_nav.html' %}
+  </div>
+
+  <!-- Print toolbar (hidden on print) -->
+  <div class="no-print bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between h-12">
+      <a href="{{ url_for('salary_view') }}" class="text-sm font-medium text-gray-600 hover:text-orange-500 transition">← Back to Salary</a>
+      <button onclick="window.print()"
+        class="flex items-center gap-1.5 bg-orange-500 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-orange-600 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Print / Save PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Salary Slip -->
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div class="slip-card bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-[#0F1E36] text-white px-8 py-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight">D G Constructions</h1>
+            <p class="text-slate-300 text-sm mt-1">Pune, Maharashtra, India</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-orange-300 uppercase font-semibold tracking-widest">Salary Slip</p>
+            <p class="text-xl font-bold mt-1">{{ month_name }} {{ slip.year }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee info -->
+      <div class="px-8 py-5 bg-orange-50 border-b border-orange-100">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Employee</p>
+            <p class="font-bold text-gray-800 mt-0.5">{{ slip.emp_name }}</p>
+          </div>
+          {% if slip.designation %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Designation</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.designation }}</p>
+          </div>
+          {% endif %}
+          {% if slip.department %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Department</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.department }}</p>
+          </div>
+          {% endif %}
+          {% if slip.location_name %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Location</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.location_name }}</p>
+          </div>
+          {% endif %}
+          {% if slip.mobile %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Mobile</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.mobile }}</p>
+          </div>
+          {% endif %}
+          {% if slip.date_of_joining %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Date of Joining</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.date_of_joining }}</p>
+          </div>
+          {% endif %}
+          {% if slip.uan_number %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">UAN No.</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.uan_number }}</p>
+          </div>
+          {% endif %}
+          {% if slip.pan_number %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">PAN No.</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.pan_number }}</p>
+          </div>
+          {% endif %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Working Days</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.working_days }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Days Present</p>
+            <p class="font-medium text-gray-700 mt-0.5">{{ slip.present_days }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Earnings & Deductions -->
+      <div class="px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+
+          <!-- Earnings -->
+          <div>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">Earnings</h3>
+            <table class="w-full text-sm">
+              <tbody>
+                {% set earn_rows = [
+                  ('Basic Salary', slip.basic),
+                  ('HRA', slip.hra),
+                  ('Medical Allowance', slip.medical_allowance),
+                  ('Travel Allowance', slip.travel_allowance),
+                  ('Other Allowance', slip.other_allowance),
+                ] %}
+                {% for label, val in earn_rows %}
+                  {% if val %}
+                  <tr class="border-b border-gray-50">
+                    <td class="py-2 text-gray-600">{{ label }}</td>
+                    <td class="py-2 text-right font-medium text-gray-800">₹{{ "{:,.0f}".format(val) }}</td>
+                  </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr class="bg-green-50">
+                  <td class="py-2.5 px-2 font-bold text-gray-800 rounded-l-lg">Gross Salary</td>
+                  <td class="py-2.5 px-2 text-right font-bold text-green-700 text-base rounded-r-lg">₹{{ "{:,.0f}".format(slip.gross) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Deductions -->
+          <div>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">Deductions</h3>
+            <table class="w-full text-sm">
+              <tbody>
+                {% set ded_rows = [
+                  ('PF (Employee)', slip.pf_employee),
+                  ('PF (Employer)', slip.pf_employer),
+                  ('ESI (Employee)', slip.esi_employee),
+                  ('ESI (Employer)', slip.esi_employer),
+                  ('TDS', slip.tds),
+                  ('Other Deductions', slip.other_deductions),
+                ] %}
+                {% for label, val in ded_rows %}
+                  {% if val %}
+                  <tr class="border-b border-gray-50">
+                    <td class="py-2 text-gray-600">{{ label }}</td>
+                    <td class="py-2 text-right font-medium text-red-600">₹{{ "{:,.0f}".format(val) }}</td>
+                  </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr class="bg-red-50">
+                  <td class="py-2.5 px-2 font-bold text-gray-800 rounded-l-lg">Total Deductions</td>
+                  <td class="py-2.5 px-2 text-right font-bold text-red-600 text-base rounded-r-lg">
+                    ₹{{ "{:,.0f}".format(slip.pf_employee + slip.pf_employer + slip.esi_employee + slip.esi_employer + slip.tds + slip.other_deductions) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Net Pay -->
+        <div class="mt-6 bg-[#0F1E36] text-white rounded-xl px-6 py-4 flex items-center justify-between">
+          <span class="text-base font-bold">Net Pay (Take Home)</span>
+          <span class="text-2xl font-extrabold">₹{{ "{:,.0f}".format(slip.net_pay) }}</span>
+        </div>
+
+        <!-- Amount in words (simple) -->
+        <p class="text-xs text-gray-400 mt-2 text-right italic">
+          (Auto-calculated · {{ month_name }} {{ slip.year }})
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-8 py-5 bg-gray-50 border-t border-gray-100">
+        <div class="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p class="text-xs text-gray-400">Generated by <span class="font-medium text-gray-600">{{ slip.generated_by_name }}</span> on {{ slip.generated_at[:16] }}</p>
+            <p class="text-xs text-gray-400 mt-1">This is a computer generated salary slip and does not require a signature.</p>
+          </div>
+          <div class="text-right">
+            <div class="border-t border-gray-400 pt-10 px-12">
+              <p class="text-xs text-gray-500">Authorised Signatory</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
