@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import calendar
 import json
 import os
+import re
 import uuid
 
 def _utcnow():
@@ -19,6 +20,120 @@ except ImportError:
 import sqlite3
 from pathlib import Path
 import requests as http_requests
+
+# PostgreSQL support (used on Railway when DATABASE_URL is set)
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    import psycopg2
+    import psycopg2.extras
+
+
+class _Cursor:
+    """Normalises sqlite3 and psycopg2 cursors to a common interface."""
+    def __init__(self, cursor, last_id=None):
+        self._c = cursor
+        self._last_id = last_id
+
+    @property
+    def lastrowid(self):
+        return self._last_id
+
+    def fetchone(self):
+        return self._c.fetchone()
+
+    def fetchall(self):
+        return self._c.fetchall()
+
+
+class _DB:
+    """Thin adapter that makes SQLite and PostgreSQL look identical to the app."""
+
+    _INSERT_RE = re.compile(r'^\s*INSERT\b', re.IGNORECASE)
+    _OR_IGNORE_RE = re.compile(r'\bINSERT\s+OR\s+IGNORE\b', re.IGNORECASE)
+    _PRAGMA_RE = re.compile(r'^\s*PRAGMA\s+table_info\((\w+)\)', re.IGNORECASE)
+    _AUTOINCREMENT_RE = re.compile(r'\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b', re.IGNORECASE)
+    _DATETIME_RE = re.compile(r'\bDATETIME\b', re.IGNORECASE)
+
+    def __init__(self, conn, is_pg=False):
+        self._conn = conn
+        self._is_pg = is_pg
+
+    def _pg_sql(self, sql):
+        """Convert SQLite SQL to PostgreSQL SQL."""
+        sql = sql.replace('?', '%s')
+        sql = self._OR_IGNORE_RE.sub('INSERT', sql)
+        sql = self._AUTOINCREMENT_RE.sub('SERIAL PRIMARY KEY', sql)
+        sql = self._DATETIME_RE.sub('TIMESTAMP', sql)
+        return sql
+
+    def execute(self, sql, params=()):
+        # Handle PRAGMA table_info → information_schema for PostgreSQL
+        m = self._PRAGMA_RE.match(sql)
+        if m and self._is_pg:
+            table = m.group(1)
+            cur = self._conn.cursor()
+            cur.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = %s AND table_schema = 'public'",
+                (table,),
+            )
+            # Return tuples so row[1] returns the column name (matches SQLite PRAGMA layout)
+            rows = [(0, r[0]) for r in cur.fetchall()]
+
+            class _FakeCursor:
+                def fetchall(inner_self): return rows
+                def fetchone(inner_self): return rows[0] if rows else None
+
+            return _Cursor(_FakeCursor())
+
+        if self._is_pg:
+            adapted = self._pg_sql(sql)
+            has_or_ignore = bool(self._OR_IGNORE_RE.search(sql))
+            is_insert = bool(self._INSERT_RE.match(adapted))
+
+            if has_or_ignore:
+                adapted = adapted.rstrip().rstrip(';') + ' ON CONFLICT DO NOTHING'
+            if is_insert and 'RETURNING' not in adapted.upper():
+                adapted = adapted.rstrip().rstrip(';') + ' RETURNING id'
+
+            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(adapted, params or None)
+
+            last_id = None
+            if is_insert:
+                row = cur.fetchone()
+                last_id = row['id'] if row else None
+            return _Cursor(cur, last_id)
+        else:
+            cur = self._conn.execute(sql, params)
+            return _Cursor(cur, cur.lastrowid)
+
+    def executemany(self, sql, params_list):
+        if self._is_pg:
+            adapted = self._pg_sql(sql)
+            cur = self._conn.cursor()
+            cur.executemany(adapted, params_list)
+        else:
+            self._conn.executemany(sql, params_list)
+
+    def executescript(self, sql):
+        if self._is_pg:
+            adapted = self._pg_sql(sql)
+            cur = self._conn.cursor()
+            for stmt in adapted.split(';'):
+                stmt = stmt.strip()
+                if stmt:
+                    cur.execute(stmt)
+        else:
+            self._conn.executescript(sql)
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -102,14 +217,20 @@ def _next_occurrence(due_at, recurrence):
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL)
+            g.db = _DB(conn, is_pg=True)
+        else:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            g.db = _DB(conn, is_pg=False)
     return g.db
 
 @app.teardown_appcontext
 def close_db(error=None):
     db = g.pop("db", None)
     if db is not None:
+        db.commit()
         db.close()
 
 def init_db():
