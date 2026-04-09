@@ -577,7 +577,7 @@ def dashboard():
         SELECT t.*, e.name AS assignee_name, c.name AS creator_name
         FROM tasks t
         JOIN employees e ON e.id = t.assigned_to
-        JOIN employees c ON c.id = t.created_by
+        LEFT JOIN employees c ON c.id = t.created_by
         WHERE (
             t.assigned_to = ?
             OR t.created_by = ?
@@ -618,7 +618,7 @@ def tasks_list():
         SELECT t.*, e.name AS assignee_name, c.name AS creator_name
         FROM tasks t
         JOIN employees e ON e.id = t.assigned_to
-        JOIN employees c ON c.id = t.created_by
+        LEFT JOIN employees c ON c.id = t.created_by
         WHERE (
             t.assigned_to = ?
             OR t.created_by = ?
@@ -728,7 +728,7 @@ def task_detail(task_id):
         SELECT t.*, e.name AS assignee_name, c.name AS creator_name
         FROM tasks t
         JOIN employees e ON e.id = t.assigned_to
-        JOIN employees c ON c.id = t.created_by
+        LEFT JOIN employees c ON c.id = t.created_by
         WHERE t.id = ?
         """,
         (task_id,),
@@ -1753,7 +1753,7 @@ def api_list_tasks():
                e.name AS assignee_name, c.name AS creator_name
         FROM tasks t
         JOIN employees e ON e.id = t.assigned_to
-        JOIN employees c ON c.id = t.created_by
+        LEFT JOIN employees c ON c.id = t.created_by
         WHERE 1=1
     """
     params = []
@@ -1821,7 +1821,7 @@ def api_get_task(task_id):
         SELECT t.*, e.name AS assignee_name, c.name AS creator_name
         FROM tasks t
         JOIN employees e ON e.id = t.assigned_to
-        JOIN employees c ON c.id = t.created_by
+        LEFT JOIN employees c ON c.id = t.created_by
         WHERE t.id = ?
         """,
         (task_id,),
