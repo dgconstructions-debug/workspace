@@ -734,27 +734,42 @@ def tasks_list():
     user = current_user()
     db = get_db()
 
-    tasks = db.execute(
-        """
-        SELECT t.*, e.name AS assignee_name, c.name AS creator_name
-        FROM tasks t
-        JOIN employees e ON e.id = t.assigned_to
-        LEFT JOIN employees c ON c.id = t.created_by
-        WHERE (
-            t.assigned_to = ?
-            OR t.created_by = ?
-            OR t.id IN (
-                SELECT task_id FROM task_watchers WHERE employee_id = ?
+    if user["role"] in ("admin", "manager"):
+        tasks = db.execute(
+            """
+            SELECT t.*, e.name AS assignee_name, c.name AS creator_name
+            FROM tasks t
+            JOIN employees e ON e.id = t.assigned_to
+            LEFT JOIN employees c ON c.id = t.created_by
+            WHERE (
+                t.recurrence IS NULL
+                OR t.status NOT IN ('done', 'cancelled')
             )
-        )
-        AND (
-            t.recurrence IS NULL
-            OR t.status NOT IN ('done', 'cancelled')
-        )
-        ORDER BY t.due_at ASC
-        """,
-        (user["id"], user["id"], user["id"]),
-    ).fetchall()
+            ORDER BY t.due_at ASC
+            """
+        ).fetchall()
+    else:
+        tasks = db.execute(
+            """
+            SELECT t.*, e.name AS assignee_name, c.name AS creator_name
+            FROM tasks t
+            JOIN employees e ON e.id = t.assigned_to
+            LEFT JOIN employees c ON c.id = t.created_by
+            WHERE (
+                t.assigned_to = ?
+                OR t.created_by = ?
+                OR t.id IN (
+                    SELECT task_id FROM task_watchers WHERE employee_id = ?
+                )
+            )
+            AND (
+                t.recurrence IS NULL
+                OR t.status NOT IN ('done', 'cancelled')
+            )
+            ORDER BY t.due_at ASC
+            """,
+            (user["id"], user["id"], user["id"]),
+        ).fetchall()
 
     employees = db.execute(
         "SELECT id, name, mobile FROM employees ORDER BY name ASC"
@@ -1851,17 +1866,64 @@ def gcal_disconnect():
 # JSON API for eigent / Claude skill
 # ---------------------------
 
+import secrets as _secrets
+_api_sessions = {}   # token -> employee row dict (in-memory; resets on restart)
+
 def _api_auth():
-    """Returns None if authorised, else a 401 JSON response."""
-    token = request.headers.get("X-API-Token", "")
-    if token != API_TOKEN:
-        return jsonify({"error": "Unauthorized"}), 401
-    return None
+    """Returns (None, None) if authorised via static API_TOKEN or mobile login token,
+    else returns (401 response, None).
+    Second return value is the authenticated employee dict (or None for static token)."""
+    token = request.headers.get("X-API-Token", "") or request.headers.get("Authorization", "").removeprefix("Bearer ")
+    if token == API_TOKEN:
+        return None, None
+    if token in _api_sessions:
+        return None, _api_sessions[token]
+    return jsonify({"error": "Unauthorized"}), 401
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    """Mobile app login. POST {mobile, password} → {token, employee}"""
+    data = request.get_json(force=True) or {}
+    mobile   = (data.get("mobile") or "").strip()
+    password = (data.get("password") or "")
+
+    if not mobile or not password:
+        return jsonify({"error": "mobile and password are required"}), 400
+
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM employees WHERE mobile = ?", (mobile,)
+    ).fetchone()
+
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"error": "Invalid mobile or password"}), 401
+
+    token = _secrets.token_hex(32)
+    _api_sessions[token] = dict(user)
+
+    return jsonify({
+        "token": token,
+        "employee": {
+            "id":   user["id"],
+            "name": user["name"],
+            "role": user["role"],
+            "email": user["email"],
+            "mobile": user["mobile"],
+        }
+    })
+
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    token = request.headers.get("X-API-Token", "") or request.headers.get("Authorization", "").removeprefix("Bearer ")
+    _api_sessions.pop(token, None)
+    return jsonify({"success": True})
 
 
 @app.route("/api/tasks", methods=["GET"])
 def api_list_tasks():
-    err = _api_auth()
+    err, _ = _api_auth()
     if err:
         return err
     db = get_db()
@@ -1892,7 +1954,7 @@ def api_list_tasks():
 
 @app.route("/api/tasks", methods=["POST"])
 def api_create_task():
-    err = _api_auth()
+    err, _ = _api_auth()
     if err:
         return err
     data = request.get_json(force=True)
@@ -1933,7 +1995,7 @@ def api_create_task():
 
 @app.route("/api/tasks/<int:task_id>", methods=["GET"])
 def api_get_task(task_id):
-    err = _api_auth()
+    err, _ = _api_auth()
     if err:
         return err
     db = get_db()
@@ -1954,7 +2016,7 @@ def api_get_task(task_id):
 
 @app.route("/api/tasks/<int:task_id>/status", methods=["PATCH"])
 def api_update_status(task_id):
-    err = _api_auth()
+    err, _ = _api_auth()
     if err:
         return err
     data = request.get_json(force=True)
@@ -1969,7 +2031,7 @@ def api_update_status(task_id):
 
 @app.route("/api/employees", methods=["GET"])
 def api_list_employees():
-    err = _api_auth()
+    err, _ = _api_auth()
     if err:
         return err
     db = get_db()
